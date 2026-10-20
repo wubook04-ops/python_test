@@ -1,0 +1,81 @@
+import math
+from random import random
+import matplotlib.pyplot as plt
+
+def func(x,y):
+    eq = 3*x**2 -2.1*x**4 +x**6/3 + x*y -3*y**2 +3*y**4
+    return eq
+
+class SA():
+    def __init__(self, func, iter=100, T0=1000, Tf=0.01, alpha=0.99):
+        self.func = func
+        self.iter = iter    #内循环迭代次数，L=100
+        self.T0 = T0        #初始温度T0为100
+        self.Tf = Tf        #温度终值Tf为0.01
+        self.alpha = alpha  #降温系数，alpha=0.99
+        self.T = T0         #当前温度
+        self.x = [random() * 11 - 5 for i in range(iter)]   #随机生成100个x的值
+        self.y = [random() * 11 - 5 for i in range(iter)]   #随机生成100个y的值
+        self.most_best = []
+        self.history = {'f':[],'T':[]}
+
+    def generate_new(self,x,y):  #扰动产生新解的过程
+        while True:
+            x_new = x + self.T * (random() - random())
+            y_new = y + self.T * (random() - random())
+            if (-5 <= x_new <= 5) & (-5 <= y_new <= 5):
+                break
+        return x_new, y_new
+
+    def Metrospolis(self,f,f_new):
+        if f_new <= f:
+            return 1
+        else:
+            p = math.exp((f - f_new) / self.T)
+            if random() < p:
+                return 1
+            else:
+                return 0
+
+    def best(self):
+        f_list = []         #f_list数组保存每次迭代之后的值
+        for i in range(self.iter):
+            f = self.func(self.x[i],self.y[i])
+            f_list.append(f)
+        f_best = min(f_list)
+        idx = f_list.index(f_best)
+        return f_best, idx  #f_best, idx 分别为在该温度下，迭代 L 次后目标函数的最优解和最优解的下标
+
+    def run(self):
+        count = 0
+        #外循环迭代，直至当前温度小于终止温度的阈值
+        while self.T > self.Tf:
+            # 内循环迭代100次
+            for i in range(self.iter):
+                f = self.func(self.x[i], self.y[i])
+                x_new, y_new = self.generate_new(self.x[i], self.y[i])
+                f_new = self.func(x_new, y_new)
+                if self.Metrospolis(f, f_new):
+                    #如果接受新值，则把新值的x、y存入x数组和y数组
+                    self.x[i] = x_new
+                    self.y[i] = y_new
+            #迭代第L次，记录在该温度下的最优解
+            ft,_ = self.best()
+            self.history['f'].append(ft)
+            self.history['T'].append(self.T)
+            #温度按照一定比例下降（冷却）
+            self.T = self.T * self.alpha
+            count += 1
+            #得到最优解
+        f_best, idx = self.best()
+        print(f'F= {f_best}, x= {self.x[idx]}, y= {self.y[idx]}')
+
+sa = SA(func)
+sa.run()
+plt.plot(sa.history['T'], sa.history['f'])
+plt.title('SA')
+plt.xlabel('T')
+plt.ylabel('f')
+plt.gca().invert_xaxis()
+plt.show()
+plt.savefig('退火算法.png',dpi = 800)
